@@ -1,0 +1,19 @@
+{
+  "name": "valheim-discord-bot",
+  "version": "1.0.0",
+  "description": "Manage Valheim Server",
+  "main": "index.js",
+  "author": "Uellitch",
+  "license": "MIT",
+  "scripts": {
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "axios": "^0.21.1",
+    "discord.js": "^12.5.1",
+    "dotenv": "^8.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.7"
+  }
+}
