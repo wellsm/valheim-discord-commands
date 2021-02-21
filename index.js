@@ -28,31 +28,39 @@ const MESSAGE = {
 };
 
 const COMMANDS = [
-    { command: 'start', description: 'esse é brabo. inicia o servidor do valheim e retorna o IP' },
-    { command: 'stop', description: 'esse infelizmente desliga o servidor do valheim' },
-    { command: 'status', description: 'básicão. exibe o status do servidor do valheim' },
-    { command: 'continue', description: 'tu é o viciadão memo hein, pode jogar mais um pouco' }
+    { command: 'start', description: 'esse é brabo. inicia o server do valheim e retorna o IP' },
+    { command: 'stop', description: 'minhas condolências, esse aqui desliga o server do valheim' },
+    { command: 'status', description: 'básicão. exibe o status do server do valheim' },
+    { command: 'continue', description: 'tu é o viciadão memo hein, esse te deixa jogar mais um pouco' }
 ];
 
 const COLOR = 15088719;
 const NO_IP = '```-```';
-const IP = (ip) => ip != '' ? ('```:ip:2456```').replace(':ip', ip) : NO_IP;
 
-const INSTANCE_INTERVAL = null;
+const IP      = (ip) => ip != '' ? ('```:ip:2456```').replace(':ip', ip) : NO_IP;
+const STOP_IN = () => TIME_TO_STOP < 1 ? `${TIME_TO_STOP * 60} segundos` : `${TIME_TO_STOP} minutos`;
+
+let INSTANCE_INTERVAL = null;
+let INSTANCE_TIMEOUT = null;
+
 const SET_INSTANCE_INTERVAL = () => setInterval(() => {
     axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
         {
             "color": COLOR,
-            "title": "hey",
-            "description": `ainda ta aí? digite !instance continue para [confirmar]\nou a máquina irá desligar após ${TIME_TO_STOP} minutos`
+            "title": "hey arrombado/senhorita",
+            "description": `ainda ta aí?\no server irá desligar em ${STOP_IN()}\ndigite o comando abaixo e continue playando`,
+            "fields": [
+                { "name": "comando", "value": "```!instance continue```", "inline": true}
+            ]
         }
     ]});
-}, process.env.INSTANCE_INTERVAL);
 
-const INSTANCE_TIMEOUT = null;
-const SET_INSTANCE_TIMEOUT = () => setTimeout(() => {
+    clearTimeout(INSTANCE_TIMEOUT);
 
-});
+    INSTANCE_TIMEOUT = SET_INSTANCE_TIMEOUT();
+}, TIME_INTERVAL * 60 * 1000);
+
+const SET_INSTANCE_TIMEOUT = () => setTimeout(() => commands.instance.stop(true), TIME_TO_STOP * 60 * 1000);
 
 const zone = compute.zone(INSTANCE_ZONE);
 const vm = zone.vm(INSTANCE_NAME);
@@ -80,7 +88,7 @@ const commands = {
         help: async () => {
             const description = COMMANDS.map(command => `**${command.command}:** ${command.description}`).join('\n');
 
-            axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
+            return axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
                 {
                     "color": COLOR,
                     "title": 'comandos',
@@ -106,16 +114,18 @@ const commands = {
                         ]
                     }
                 ]});
+
+                INSTANCE_INTERVAL = SET_INSTANCE_INTERVAL();
             }, 30 * 1000);
 
-            axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
+            return axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
                 {
                     "description": "ôooo viciado, ta iniciando, aguenta ae caraio",
                     "color": COLOR
                 }
             ]});
         },
-        stop: async () => {
+        stop: async (force = false) => {
             await vm.stop();
 
             setTimeout(() => {
@@ -131,9 +141,15 @@ const commands = {
                 ]});
             }, 10 * 1000);
 
-            axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
+            let description = "porra.... finalmente vai dormir ein. lembrou que tem que trabalhar amanhã é?";
+
+            if (!force) {
+                description = "porra.... não fode, ve se lembra de desligar da próxima vez!";
+            }
+
+            return axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
                 {
-                    "description": "porra.... finalmente vai dormir ein. lembrou que tem que trabalhar amanhã é?",
+                    "description": description,
                     "color": COLOR
                 }
             ]});
@@ -154,7 +170,10 @@ const commands = {
             ]});
         },
         continue: () => {
+            clearInterval(INSTANCE_INTERVAL);
+            clearTimeout(INSTANCE_TIMEOUT);
 
+            INSTANCE_INTERVAL = SET_INSTANCE_INTERVAL();
         },
     },
 };
