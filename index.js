@@ -7,15 +7,18 @@ const compute = new Compute();
 
 require('dotenv/config');
 
-const INSTANCE_ZONE   = process.env.INSTANCE_ZONE;
-const INSTANCE_NAME   = process.env.INSTANCE_NAME;
+const INSTANCE_ZONE = process.env.INSTANCE_ZONE;
+const INSTANCE_NAME = process.env.INSTANCE_NAME;
+const TIME_INTERVAL = process.env.INSTANCE_INTERVAL;
+const TIME_TO_STOP  = process.env.INSTANCE_TIME_STOP;
+
 const DISCORD_CHANNEL = process.env.DISCORD_CHANNEL;
 const DISCORD_TOKEN   = process.env.DISCORD_TOKEN;
 const DISCORD_URL     = process.env.DISCORD_URL;
 
 const STATUSES = {
-    'TERMINATED': 'Desligado',
-    'RUNNING': 'Ligado'
+    'TERMINATED': '```diff\n- desligado\n```',
+    'RUNNING': '```diff\n+ ligado\n```'
 };
 
 const MESSAGE = {
@@ -23,6 +26,33 @@ const MESSAGE = {
     "username": "Valheim Server",
     "embeds": []
 };
+
+const COMMANDS = [
+    { command: 'start', description: 'esse é brabo. inicia o servidor do valheim e retorna o IP' },
+    { command: 'stop', description: 'esse infelizmente desliga o servidor do valheim' },
+    { command: 'status', description: 'básicão. exibe o status do servidor do valheim' },
+    { command: 'continue', description: 'tu é o viciadão memo hein, pode jogar mais um pouco' }
+];
+
+const COLOR = 15088719;
+const NO_IP = '```-```';
+const IP = (ip) => ip != '' ? ('```:ip:2456```').replace(':ip', ip) : NO_IP;
+
+const INSTANCE_INTERVAL = null;
+const SET_INSTANCE_INTERVAL = () => setInterval(() => {
+    axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
+        {
+            "color": COLOR,
+            "title": "hey",
+            "description": `ainda ta aí? digite !instance continue para [confirmar]\nou a máquina irá desligar após ${TIME_TO_STOP} minutos`
+        }
+    ]});
+}, process.env.INSTANCE_INTERVAL);
+
+const INSTANCE_TIMEOUT = null;
+const SET_INSTANCE_TIMEOUT = () => setTimeout(() => {
+
+});
 
 const zone = compute.zone(INSTANCE_ZONE);
 const vm = zone.vm(INSTANCE_NAME);
@@ -32,7 +62,7 @@ client.on('message', (message) => {
         const content = message.content.substr(1);
         const splited = content.split(' ');
         const command = splited.shift();
-        const action  = splited.shift();
+        const action  = splited.shift() || 'help';
         const method  = commands[command][action];
 
         if (method === undefined) {
@@ -47,6 +77,67 @@ client.login(DISCORD_TOKEN);
 
 const commands = {
     instance: {
+        help: async () => {
+            const description = COMMANDS.map(command => `**${command.command}:** ${command.description}`).join('\n');
+
+            axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
+                {
+                    "color": COLOR,
+                    "title": 'comandos',
+                    "description": description
+                }
+            ]});
+        },
+        start: async () => {
+            await vm.start();
+
+            setTimeout(async () => {
+                const instance = (await vm.get()).shift();
+                const status = STATUSES[instance.metadata.status];
+                const ip = instance.metadata.networkInterfaces.shift().accessConfigs.shift().natIP || '';
+
+                axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
+                    {
+                        "description": "ta aqui seu **ip** porra\nvai la jogar agora e me deixa em paz",
+                        "color": COLOR,
+                        "fields": [
+                            { "name": "status", "value": status, "inline": true },
+                            { "name": "ip", "value": IP(ip), "inline": true }
+                        ]
+                    }
+                ]});
+            }, 30 * 1000);
+
+            axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
+                {
+                    "description": "ôooo viciado, ta iniciando, aguenta ae caraio",
+                    "color": COLOR
+                }
+            ]});
+        },
+        stop: async () => {
+            await vm.stop();
+
+            setTimeout(() => {
+                axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
+                    {
+                        "description": "ta desligado quirido, dorme pensando em como construir aquele machado maneiro",
+                        "color": COLOR,
+                        "fields": [
+                            { "name": "status", "value": status, "inline": true },
+                            { "name": "ip", "value": '-', "inline": true }
+                        ]
+                    }
+                ]});
+            }, 10 * 1000);
+
+            axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
+                {
+                    "description": "porra.... finalmente vai dormir ein. lembrou que tem que trabalhar amanhã é?",
+                    "color": COLOR
+                }
+            ]});
+        },
         status: async () => {
             const instance = (await vm.get()).shift();
             const status = STATUSES[instance.metadata.status];
@@ -54,68 +145,16 @@ const commands = {
 
             axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
                 {
-                    "color": 15088719,
+                    "color": COLOR,
                     "fields": [
-                        { "name": "Status", "value": status, "inline": true },
-                        { "name": "IP", "value": ip != '' ? `${ip}:2456` : '-', "inline": true }
+                        { "name": "status", "value": status, "inline": true },
+                        { "name": "ip", "value": IP(ip), "inline": true }
                     ]
                 }
             ]});
         },
-        start: () => {
-            vm.start().then(data => {
-                setTimeout(() => {
-                    vm.get().then(data => {
-                        const instance = data.shift();
-                        const ip = instance.metadata.networkInterfaces.shift().accessConfigs.shift().natIP || '';
+        continue: () => {
 
-                        axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
-                            {
-                                "description": "Ta aqui seu IP porra\nVai la jogar agora e me deixa em paz",
-                                "color": 15088719,
-                                "fields": [
-                                    { "name": "Status", "value": status, "inline": true },
-                                    { "name": "IP", "value": ip != '' ? `${ip}:2456` : '-', "inline": true }
-                                ]
-                            }
-                        ]});
-                    });
-                }, 30 * 1000);
-            });
-
-            axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
-                {
-                    "description": "Ôooo viciado, ta iniciando, aguenta ae caraio",
-                    "color": 15088719
-                }
-            ]});
         },
-        stop: () => {
-            vm.stop().then(data => {
-                setTimeout(() => {
-                    vm.get().then(data => {
-                        axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
-                            {
-                                "description": "Ta desligado quirido, dorme pensando em como construir aquele machado maneiro",
-                                "color": 15088719,
-                                "fields": [
-                                    { "name": "Status", "value": status, "inline": true },
-                                    { "name": "IP", "value": '-', "inline": true }
-                                ]
-                            }
-                        ]});
-                    });
-                }, 10 * 1000);
-            });
-
-            axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
-                {
-                    "description": "Porra.... Finalmente vai dormir ein. Lembrou que tem que trabalhar amanhã é?",
-                    "color": 15088719
-                }
-            ]});
-        }
     },
 };
-
-//commands.instance.status();
