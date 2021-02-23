@@ -50,7 +50,7 @@ const SET_INSTANCE_INTERVAL = () => setInterval(() => {
             "title": "hey arrombado/senhorita",
             "description": `ainda ta aí?\no server irá desligar em ${STOP_IN()}\ndigite o comando abaixo e continue playando`,
             "fields": [
-                { "name": "comando", "value": "```!instance continue```", "inline": true}
+                { "name": "comando", "value": "```!instance continue```", "inline": true }
             ]
         }
     ]});
@@ -60,7 +60,7 @@ const SET_INSTANCE_INTERVAL = () => setInterval(() => {
     INSTANCE_TIMEOUT = SET_INSTANCE_TIMEOUT();
 }, TIME_INTERVAL * 60 * 1000);
 
-const SET_INSTANCE_TIMEOUT = () => setTimeout(() => commands.instance.stop(true), TIME_TO_STOP * 60 * 1000);
+const SET_INSTANCE_TIMEOUT = () => setTimeout(() => commands.instance.stop("porra.... não fode, ve se lembra de desligar da próxima vez!"), TIME_TO_STOP * 60 * 1000);
 
 const zone = compute.zone(INSTANCE_ZONE);
 const vm = zone.vm(INSTANCE_NAME);
@@ -97,9 +97,16 @@ const commands = {
             ]});
         },
         start: async () => {
+            await axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
+                {
+                    "description": "ôooo viciado, ta iniciando, aguenta ae caraio",
+                    "color": COLOR
+                }
+            ]});
+
             await vm.start();
 
-            setTimeout(async () => {
+            return setTimeout(async () => {
                 const instance = (await vm.get()).shift();
                 const status = STATUSES[instance.metadata.status];
                 const ip = instance.metadata.networkInterfaces.shift().accessConfigs.shift().natIP || '';
@@ -117,18 +124,21 @@ const commands = {
 
                 INSTANCE_INTERVAL = SET_INSTANCE_INTERVAL();
             }, 30 * 1000);
-
-            return axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
+        },
+        stop: async (description = "porra.... finalmente vai dormir ein. lembrou que tem que trabalhar amanhã é?") => {
+            await axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
                 {
-                    "description": "ôooo viciado, ta iniciando, aguenta ae caraio",
+                    "description": description,
                     "color": COLOR
                 }
             ]});
-        },
-        stop: async (force = false) => {
+
             await vm.stop();
 
-            setTimeout(() => {
+            setTimeout(async () => {
+                const instance = (await vm.get()).shift();
+                const status = STATUSES[instance.metadata.status];
+
                 axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
                     {
                         "description": "ta desligado quirido, dorme pensando em como construir aquele machado maneiro",
@@ -140,26 +150,13 @@ const commands = {
                     }
                 ]});
             }, 10 * 1000);
-
-            let description = "porra.... finalmente vai dormir ein. lembrou que tem que trabalhar amanhã é?";
-
-            if (!force) {
-                description = "porra.... não fode, ve se lembra de desligar da próxima vez!";
-            }
-
-            return axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
-                {
-                    "description": description,
-                    "color": COLOR
-                }
-            ]});
         },
         status: async () => {
             const instance = (await vm.get()).shift();
             const status = STATUSES[instance.metadata.status];
             const ip = instance.metadata.networkInterfaces.shift().accessConfigs.shift().natIP || '';
 
-            axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
+            return await axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
                 {
                     "color": COLOR,
                     "fields": [
