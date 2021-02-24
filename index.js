@@ -136,6 +136,9 @@ const commands = {
 
             await vm.stop();
 
+            clearInterval(INSTANCE_INTERVAL);
+            clearTimeout(INSTANCE_TIMEOUT);
+
             setTimeout(async () => {
                 const instance = (await vm.get()).shift();
                 const status = STATUSES[instance.metadata.status];
