@@ -37,8 +37,9 @@ const COMMANDS = [
 const COLOR = 15088719;
 const NO_IP = '```-```';
 
-const IP      = (ip) => ip != '' ? ('```:ip:2456```').replace(':ip', ip) : NO_IP;
-const STOP_IN = () => TIME_TO_STOP < 1 ? `${TIME_TO_STOP * 60} segundos` : `${TIME_TO_STOP} minutos`;
+const IP       = (ip) => ip != '' ? ('```:ip:2456```').replace(':ip', ip) : NO_IP;
+const STOP_IN  = () => TIME_TO_STOP < 1 ? `${TIME_TO_STOP * 60} segundos` : `${TIME_TO_STOP} minutos`;
+const INTERVAL = () => `${TIME_INTERVAL} minutos`;
 
 let INSTANCE_INTERVAL = null;
 let INSTANCE_TIMEOUT = null;
@@ -171,6 +172,13 @@ const commands = {
             clearTimeout(INSTANCE_TIMEOUT);
 
             INSTANCE_INTERVAL = SET_INSTANCE_INTERVAL();
+
+            return axios.post(DISCORD_URL, { ...MESSAGE, embeds: [
+                {
+                    "description": `pode jogar mais um poquinho ta bom? voces tem mais ${INTERVAL()}`,
+                    "color": COLOR
+                }
+            ]});
         },
     },
 };
